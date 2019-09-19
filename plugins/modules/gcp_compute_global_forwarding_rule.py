@@ -192,7 +192,7 @@ options:
 
 EXAMPLES = '''
 - name: create a global address
-  gcp_compute_global_address:
+  google.cloud.gcp_compute_global_address:
     name: globaladdress-globalforwardingrule
     project: "{{ gcp_project }}"
     auth_kind: "{{ gcp_cred_kind }}"
@@ -201,7 +201,7 @@ EXAMPLES = '''
   register: globaladdress
 
 - name: create a instance group
-  gcp_compute_instance_group:
+  google.cloud.gcp_compute_instance_group:
     name: instancegroup-globalforwardingrule
     zone: us-central1-a
     project: "{{ gcp_project }}"
@@ -211,7 +211,7 @@ EXAMPLES = '''
   register: instancegroup
 
 - name: create a HTTP health check
-  gcp_compute_http_health_check:
+  google.cloud.gcp_compute_http_health_check:
     name: httphealthcheck-globalforwardingrule
     healthy_threshold: 10
     port: 8080
@@ -224,7 +224,7 @@ EXAMPLES = '''
   register: healthcheck
 
 - name: create a backend service
-  gcp_compute_backend_service:
+  google.cloud.gcp_compute_backend_service:
     name: backendservice-globalforwardingrule
     backends:
     - group: "{{ instancegroup.selfLink }}"
@@ -238,7 +238,7 @@ EXAMPLES = '''
   register: backendservice
 
 - name: create a URL map
-  gcp_compute_url_map:
+  google.cloud.gcp_compute_url_map:
     name: urlmap-globalforwardingrule
     default_service: "{{ backendservice }}"
     project: "{{ gcp_project }}"
@@ -248,7 +248,7 @@ EXAMPLES = '''
   register: urlmap
 
 - name: create a target HTTP proxy
-  gcp_compute_target_http_proxy:
+  google.cloud.gcp_compute_target_http_proxy:
     name: targethttpproxy-globalforwardingrule
     url_map: "{{ urlmap }}"
     project: "{{ gcp_project }}"
@@ -258,7 +258,7 @@ EXAMPLES = '''
   register: httpproxy
 
 - name: create a global forwarding rule
-  gcp_compute_global_forwarding_rule:
+  google.cloud.gcp_compute_global_forwarding_rule:
     name: test_object
     ip_address: "{{ globaladdress.address }}"
     ip_protocol: TCP

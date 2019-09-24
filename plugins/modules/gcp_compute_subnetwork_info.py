@@ -177,6 +177,23 @@ resources:
         of this resource.
       returned: success
       type: str
+    purpose:
+      description:
+      - The purpose of the resource. This field can be either PRIVATE or INTERNAL_HTTPS_LOAD_BALANCER.
+        A subnetwork with purpose set to INTERNAL_HTTPS_LOAD_BALANCER is a user-created
+        subnetwork that is reserved for Internal HTTP(S) Load Balancing. If unspecified,
+        the purpose defaults to PRIVATE.
+      - If set to INTERNAL_HTTPS_LOAD_BALANCER you must also set the role.
+      returned: success
+      type: str
+    role:
+      description:
+      - The role of subnetwork. Currenly, this field is only used when purpose = INTERNAL_HTTPS_LOAD_BALANCER.
+        The value can be set to ACTIVE or BACKUP. An ACTIVE subnetwork is one that
+        is currently being used for Internal HTTP(S) Load Balancing. A BACKUP subnetwork
+        is one that is ready to be promoted to ACTIVE or is currently draining.
+      returned: success
+      type: str
     secondaryIpRanges:
       description:
       - An array of configurations for secondary IP ranges for VM instances contained

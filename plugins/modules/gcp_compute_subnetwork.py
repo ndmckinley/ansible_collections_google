@@ -105,6 +105,27 @@ options:
     required: false
     type: bool
     version_added: '2.8'
+  purpose:
+    description:
+    - The purpose of the resource. This field can be either PRIVATE or INTERNAL_HTTPS_LOAD_BALANCER.
+      A subnetwork with purpose set to INTERNAL_HTTPS_LOAD_BALANCER is a user-created
+      subnetwork that is reserved for Internal HTTP(S) Load Balancing. If unspecified,
+      the purpose defaults to PRIVATE.
+    - If set to INTERNAL_HTTPS_LOAD_BALANCER you must also set the role.
+    - 'Some valid choices include: "INTERNAL_HTTPS_LOAD_BALANCER", "PRIVATE"'
+    required: false
+    type: str
+    version_added: '2.10'
+  role:
+    description:
+    - The role of subnetwork. Currenly, this field is only used when purpose = INTERNAL_HTTPS_LOAD_BALANCER.
+      The value can be set to ACTIVE or BACKUP. An ACTIVE subnetwork is one that is
+      currently being used for Internal HTTP(S) Load Balancing. A BACKUP subnetwork
+      is one that is ready to be promoted to ACTIVE or is currently draining.
+    - 'Some valid choices include: "ACTIVE", "BACKUP"'
+    required: false
+    type: str
+    version_added: '2.10'
   secondary_ip_ranges:
     description:
     - An array of configurations for secondary IP ranges for VM instances contained
@@ -274,6 +295,23 @@ fingerprint:
     this resource.
   returned: success
   type: str
+purpose:
+  description:
+  - The purpose of the resource. This field can be either PRIVATE or INTERNAL_HTTPS_LOAD_BALANCER.
+    A subnetwork with purpose set to INTERNAL_HTTPS_LOAD_BALANCER is a user-created
+    subnetwork that is reserved for Internal HTTP(S) Load Balancing. If unspecified,
+    the purpose defaults to PRIVATE.
+  - If set to INTERNAL_HTTPS_LOAD_BALANCER you must also set the role.
+  returned: success
+  type: str
+role:
+  description:
+  - The role of subnetwork. Currenly, this field is only used when purpose = INTERNAL_HTTPS_LOAD_BALANCER.
+    The value can be set to ACTIVE or BACKUP. An ACTIVE subnetwork is one that is
+    currently being used for Internal HTTP(S) Load Balancing. A BACKUP subnetwork
+    is one that is ready to be promoted to ACTIVE or is currently draining.
+  returned: success
+  type: str
 secondaryIpRanges:
   description:
   - An array of configurations for secondary IP ranges for VM instances contained
@@ -341,6 +379,8 @@ def main():
             name=dict(required=True, type='str'),
             network=dict(required=True, type='dict'),
             enable_flow_logs=dict(type='bool'),
+            purpose=dict(type='str'),
+            role=dict(type='str'),
             secondary_ip_ranges=dict(
                 type='list', elements='dict', options=dict(range_name=dict(required=True, type='str'), ip_cidr_range=dict(required=True, type='str'))
             ),
@@ -393,7 +433,11 @@ def update(module, link, kind, fetch):
 def update_fields(module, request, response):
     if response.get('ipCidrRange') != request.get('ipCidrRange'):
         ip_cidr_range_update(module, request, response)
-    if response.get('enableFlowLogs') != request.get('enableFlowLogs') or response.get('secondaryIpRanges') != request.get('secondaryIpRanges'):
+    if (
+        response.get('enableFlowLogs') != request.get('enableFlowLogs')
+        or response.get('role') != request.get('role')
+        or response.get('secondaryIpRanges') != request.get('secondaryIpRanges')
+    ):
         enable_flow_logs_update(module, request, response)
     if response.get('privateIpGoogleAccess') != request.get('privateIpGoogleAccess'):
         private_ip_google_access_update(module, request, response)
@@ -414,6 +458,7 @@ def enable_flow_logs_update(module, request, response):
         {
             u'enableFlowLogs': module.params.get('enable_flow_logs'),
             u'fingerprint': response.get('fingerprint'),
+            u'role': module.params.get('role'),
             u'secondaryIpRanges': SubnetworkSecondaryiprangesArray(module.params.get('secondary_ip_ranges', []), module).to_request(),
         },
     )
@@ -442,6 +487,8 @@ def resource_to_request(module):
         u'name': module.params.get('name'),
         u'network': replace_resource_dict(module.params.get(u'network', {}), 'selfLink'),
         u'enableFlowLogs': module.params.get('enable_flow_logs'),
+        u'purpose': module.params.get('purpose'),
+        u'role': module.params.get('role'),
         u'secondaryIpRanges': SubnetworkSecondaryiprangesArray(module.params.get('secondary_ip_ranges', []), module).to_request(),
         u'privateIpGoogleAccess': module.params.get('private_ip_google_access'),
         u'region': module.params.get('region'),
@@ -519,6 +566,8 @@ def response_to_hash(module, response):
         u'network': replace_resource_dict(module.params.get(u'network', {}), 'selfLink'),
         u'enableFlowLogs': response.get(u'enableFlowLogs'),
         u'fingerprint': response.get(u'fingerprint'),
+        u'purpose': module.params.get('purpose'),
+        u'role': response.get(u'role'),
         u'secondaryIpRanges': SubnetworkSecondaryiprangesArray(response.get(u'secondaryIpRanges', []), module).from_response(),
         u'privateIpGoogleAccess': response.get(u'privateIpGoogleAccess'),
         u'region': module.params.get('region'),

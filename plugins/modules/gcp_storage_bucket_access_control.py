@@ -378,10 +378,10 @@ def is_different(module, response):
 # This is for doing comparisons with Ansible's current parameters.
 def response_to_hash(module, response):
     return {
-        u'bucket': response.get(u'bucket'),
+        u'bucket': replace_resource_dict(module.params.get(u'bucket', {}), 'name'),
         u'domain': response.get(u'domain'),
         u'email': response.get(u'email'),
-        u'entity': response.get(u'entity'),
+        u'entity': module.params.get('entity'),
         u'entityId': response.get(u'entityId'),
         u'id': response.get(u'id'),
         u'projectTeam': BucketAccessControlProjectteam(response.get(u'projectTeam', {}), module).from_response(),

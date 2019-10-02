@@ -143,6 +143,67 @@ options:
           SHA must be provided.
         required: false
         type: str
+  github:
+    description:
+    - Describes the configuration of a trigger that creates a build whenever a GitHub
+      event is received.
+    required: false
+    type: dict
+    version_added: '2.10'
+    suboptions:
+      installation_id:
+        description:
+        - The installationID that emits the GitHub event.
+        required: false
+        type: str
+      owner:
+        description:
+        - 'Owner of the repository. For example: The owner for U(https://github.com/googlecloudplatform/cloud-builders)
+          is "googlecloudplatform".'
+        required: false
+        type: str
+      name:
+        description:
+        - 'Name of the repository. For example: The name for U(https://github.com/googlecloudplatform/cloud-builders)
+          is "cloud-builders".'
+        required: false
+        type: str
+      pull_request:
+        description:
+        - filter to match changes in pull requests. Specify only one of pullRequest
+          or push.
+        required: false
+        type: dict
+        suboptions:
+          branch:
+            description:
+            - Regex of branches to match.
+            required: false
+            type: str
+          comment_control:
+            description:
+            - Whether to block builds on a "/gcbrun" comment from a repository owner
+              or collaborator.
+            - 'Some valid choices include: "COMMENTS_DISABLED", "COMMENTS_ENABLED"'
+            required: false
+            type: str
+      push:
+        description:
+        - filter to match changes in refs, like branches or tags. Specify only one
+          of pullRequest or push.
+        required: false
+        type: dict
+        suboptions:
+          branch:
+            description:
+            - Regex of branches to match. Specify only one of branch or tag.
+            required: false
+            type: str
+          tag:
+            description:
+            - Regex of tags to match. Specify only one of branch or tag.
+            required: false
+            type: str
   build:
     description:
     - Contents of the build template. Either a filename or build template must be
@@ -461,6 +522,65 @@ triggerTemplate:
         SHA must be provided.
       returned: success
       type: str
+github:
+  description:
+  - Describes the configuration of a trigger that creates a build whenever a GitHub
+    event is received.
+  returned: success
+  type: complex
+  contains:
+    installationId:
+      description:
+      - The installationID that emits the GitHub event.
+      returned: success
+      type: str
+    owner:
+      description:
+      - 'Owner of the repository. For example: The owner for U(https://github.com/googlecloudplatform/cloud-builders)
+        is "googlecloudplatform".'
+      returned: success
+      type: str
+    name:
+      description:
+      - 'Name of the repository. For example: The name for U(https://github.com/googlecloudplatform/cloud-builders)
+        is "cloud-builders".'
+      returned: success
+      type: str
+    pullRequest:
+      description:
+      - filter to match changes in pull requests. Specify only one of pullRequest
+        or push.
+      returned: success
+      type: complex
+      contains:
+        branch:
+          description:
+          - Regex of branches to match.
+          returned: success
+          type: str
+        commentControl:
+          description:
+          - Whether to block builds on a "/gcbrun" comment from a repository owner
+            or collaborator.
+          returned: success
+          type: str
+    push:
+      description:
+      - filter to match changes in refs, like branches or tags. Specify only one of
+        pullRequest or push.
+      returned: success
+      type: complex
+      contains:
+        branch:
+          description:
+          - Regex of branches to match. Specify only one of branch or tag.
+          returned: success
+          type: str
+        tag:
+          description:
+          - Regex of tags to match. Specify only one of branch or tag.
+          returned: success
+          type: str
 build:
   description:
   - Contents of the build template. Either a filename or build template must be provided.
@@ -642,6 +762,16 @@ def main():
                     commit_sha=dict(type='str'),
                 ),
             ),
+            github=dict(
+                type='dict',
+                options=dict(
+                    installation_id=dict(type='str'),
+                    owner=dict(type='str'),
+                    name=dict(type='str'),
+                    pull_request=dict(type='dict', options=dict(branch=dict(type='str'), comment_control=dict(type='str'))),
+                    push=dict(type='dict', options=dict(branch=dict(type='str'), tag=dict(type='str'))),
+                ),
+            ),
             build=dict(
                 type='dict',
                 options=dict(
@@ -728,6 +858,7 @@ def resource_to_request(module):
         u'ignoredFiles': module.params.get('ignored_files'),
         u'includedFiles': module.params.get('included_files'),
         u'triggerTemplate': TriggerTriggertemplate(module.params.get('trigger_template', {}), module).to_request(),
+        u'github': TriggerGithub(module.params.get('github', {}), module).to_request(),
         u'build': TriggerBuild(module.params.get('build', {}), module).to_request(),
     }
     return_vals = {}
@@ -803,6 +934,7 @@ def response_to_hash(module, response):
         u'ignoredFiles': response.get(u'ignoredFiles'),
         u'includedFiles': response.get(u'includedFiles'),
         u'triggerTemplate': TriggerTriggertemplate(response.get(u'triggerTemplate', {}), module).from_response(),
+        u'github': TriggerGithub(response.get(u'github', {}), module).from_response(),
         u'build': TriggerBuild(response.get(u'build', {}), module).from_response(),
     }
 
@@ -838,6 +970,67 @@ class TriggerTriggertemplate(object):
                 u'commitSha': self.request.get(u'commitSha'),
             }
         )
+
+
+class TriggerGithub(object):
+    def __init__(self, request, module):
+        self.module = module
+        if request:
+            self.request = request
+        else:
+            self.request = {}
+
+    def to_request(self):
+        return remove_nones_from_dict(
+            {
+                u'installationId': self.request.get('installation_id'),
+                u'owner': self.request.get('owner'),
+                u'name': self.request.get('name'),
+                u'pullRequest': TriggerPullrequest(self.request.get('pull_request', {}), self.module).to_request(),
+                u'push': TriggerPush(self.request.get('push', {}), self.module).to_request(),
+            }
+        )
+
+    def from_response(self):
+        return remove_nones_from_dict(
+            {
+                u'installationId': self.request.get(u'installationId'),
+                u'owner': self.request.get(u'owner'),
+                u'name': self.request.get(u'name'),
+                u'pullRequest': TriggerPullrequest(self.request.get(u'pullRequest', {}), self.module).from_response(),
+                u'push': TriggerPush(self.request.get(u'push', {}), self.module).from_response(),
+            }
+        )
+
+
+class TriggerPullrequest(object):
+    def __init__(self, request, module):
+        self.module = module
+        if request:
+            self.request = request
+        else:
+            self.request = {}
+
+    def to_request(self):
+        return remove_nones_from_dict({u'branch': self.request.get('branch'), u'commentControl': self.request.get('comment_control')})
+
+    def from_response(self):
+        return remove_nones_from_dict({u'branch': self.request.get(u'branch'), u'commentControl': self.request.get(u'commentControl')})
+
+
+class TriggerPush(object):
+    def __init__(self, request, module):
+        self.module = module
+        if request:
+            self.request = request
+        else:
+            self.request = {}
+
+    def to_request(self):
+        return remove_nones_from_dict({u'branch': self.request.get('branch'), u'tag': self.request.get('tag')})
+
+    def from_response(self):
+        return remove_nones_from_dict({u'branch': self.request.get(u'branch'), u'tag': self.request.get(u'tag')})
 
 
 class TriggerBuild(object):

@@ -103,6 +103,7 @@ options:
     - Branch and tag names in trigger templates are interpreted as regular expressions.
       Any branch or tag change that matches that regular expression will trigger a
       build.
+    - Mutually exclusive with `github`.
     required: false
     type: dict
     suboptions:
@@ -422,6 +423,7 @@ triggerTemplate:
   - Template describing the types of source changes to trigger a build.
   - Branch and tag names in trigger templates are interpreted as regular expressions.
     Any branch or tag change that matches that regular expression will trigger a build.
+  - Mutually exclusive with `github`.
   returned: success
   type: complex
   contains:

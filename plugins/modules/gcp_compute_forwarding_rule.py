@@ -98,12 +98,6 @@ options:
       field to "{{ name-of-resource }}"'
     required: false
     type: dict
-  ip_version:
-    description:
-    - ipVersion is not a valid field for regional forwarding rules.
-    - 'Some valid choices include: "IPV4", "IPV6"'
-    required: false
-    type: str
   load_balancing_scheme:
     description:
     - 'This signifies what the ForwardingRule will be used for and can only take the
@@ -365,11 +359,6 @@ backendService:
     load balancing.
   returned: success
   type: dict
-ipVersion:
-  description:
-  - ipVersion is not a valid field for regional forwarding rules.
-  returned: success
-  type: str
 loadBalancingScheme:
   description:
   - 'This signifies what the ForwardingRule will be used for and can only take the
@@ -500,7 +489,6 @@ def main():
             ip_address=dict(type='str'),
             ip_protocol=dict(type='str'),
             backend_service=dict(type='dict'),
-            ip_version=dict(type='str'),
             load_balancing_scheme=dict(type='str'),
             name=dict(required=True, type='str'),
             network=dict(type='dict'),
@@ -581,7 +569,6 @@ def resource_to_request(module):
         u'IPAddress': module.params.get('ip_address'),
         u'IPProtocol': module.params.get('ip_protocol'),
         u'backendService': replace_resource_dict(module.params.get(u'backend_service', {}), 'selfLink'),
-        u'ipVersion': module.params.get('ip_version'),
         u'loadBalancingScheme': module.params.get('load_balancing_scheme'),
         u'name': module.params.get('name'),
         u'network': replace_resource_dict(module.params.get(u'network', {}), 'selfLink'),
@@ -663,7 +650,6 @@ def response_to_hash(module, response):
         u'IPAddress': response.get(u'IPAddress'),
         u'IPProtocol': response.get(u'IPProtocol'),
         u'backendService': response.get(u'backendService'),
-        u'ipVersion': response.get(u'ipVersion'),
         u'loadBalancingScheme': response.get(u'loadBalancingScheme'),
         u'name': response.get(u'name'),
         u'network': response.get(u'network'),

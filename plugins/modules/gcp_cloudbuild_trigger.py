@@ -103,7 +103,7 @@ options:
     - Branch and tag names in trigger templates are interpreted as regular expressions.
       Any branch or tag change that matches that regular expression will trigger a
       build.
-    required: false
+    required: true
     type: dict
     suboptions:
       project_id:
@@ -129,14 +129,12 @@ options:
         description:
         - Name of the branch to build. Exactly one a of branch name, tag, or commit
           SHA must be provided.
-        - This field is a regular expression.
         required: false
         type: str
       tag_name:
         description:
         - Name of the tag to build. Exactly one of a branch name, tag, or commit SHA
           must be provided.
-        - This field is a regular expression.
         required: false
         type: str
       commit_sha:
@@ -449,14 +447,12 @@ triggerTemplate:
       description:
       - Name of the branch to build. Exactly one a of branch name, tag, or commit
         SHA must be provided.
-      - This field is a regular expression.
       returned: success
       type: str
     tagName:
       description:
       - Name of the tag to build. Exactly one of a branch name, tag, or commit SHA
         must be provided.
-      - This field is a regular expression.
       returned: success
       type: str
     commitSha:
@@ -636,6 +632,7 @@ def main():
             ignored_files=dict(type='list', elements='str'),
             included_files=dict(type='list', elements='str'),
             trigger_template=dict(
+                required=True,
                 type='dict',
                 options=dict(
                     project_id=dict(type='str'),

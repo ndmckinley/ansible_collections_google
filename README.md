@@ -48,6 +48,7 @@ ansible-galaxy collection install google.cloud
   * Compute Engine Subnetwork (gcp_compute_subnetwork, gcp_compute_subnetwork_facts)
   * Compute Engine TargetHttpProxy (gcp_compute_target_http_proxy, gcp_compute_target_http_proxy_facts)
   * Compute Engine TargetHttpsProxy (gcp_compute_target_https_proxy, gcp_compute_target_https_proxy_facts)
+  * Compute Engine TargetInstance (gcp_compute_target_instance, gcp_compute_target_instance_facts)
   * Compute Engine TargetPool (gcp_compute_target_pool, gcp_compute_target_pool_facts)
   * Compute Engine TargetSslProxy (gcp_compute_target_ssl_proxy, gcp_compute_target_ssl_proxy_facts)
   * Compute Engine TargetTcpProxy (gcp_compute_target_tcp_proxy, gcp_compute_target_tcp_proxy_facts)

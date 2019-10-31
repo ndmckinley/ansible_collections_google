@@ -210,6 +210,39 @@ resources:
       - URL of the GCP region for this subnetwork.
       returned: success
       type: str
+    logConfig:
+      description:
+      - Denotes the logging options for the subnetwork flow logs. If logging is enabled
+        logs will be exported to Stackdriver.
+      returned: success
+      type: complex
+      contains:
+        aggregationInterval:
+          description:
+          - Can only be specified if VPC flow logging for this subnetwork is enabled.
+          - Toggles the aggregation interval for collecting flow logs. Increasing
+            the interval time will reduce the amount of generated flow logs for long
+            lasting connections. Default is an interval of 5 seconds per connection.
+          - Possible values are INTERVAL_5_SEC, INTERVAL_30_SEC, INTERVAL_1_MIN, INTERVAL_5_MIN,
+            INTERVAL_10_MIN, INTERVAL_15_MIN .
+          returned: success
+          type: str
+        flowSampling:
+          description:
+          - Can only be specified if VPC flow logging for this subnetwork is enabled.
+          - The value of the field must be in [0, 1]. Set the sampling rate of VPC
+            flow logs within the subnetwork where 1.0 means all collected logs are
+            reported and 0.0 means no logs are reported. Default is 0.5 which means
+            half of all collected logs are reported.
+          returned: success
+          type: str
+        metadata:
+          description:
+          - Can only be specified if VPC flow logging for this subnetwork is enabled.
+          - Configures whether metadata fields should be added to the reported VPC
+            flow logs. Default is `INCLUDE_ALL_METADATA`.
+          returned: success
+          type: str
 '''
 
 ################################################################################

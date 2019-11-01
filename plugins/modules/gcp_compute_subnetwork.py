@@ -140,6 +140,46 @@ options:
     - URL of the GCP region for this subnetwork.
     required: true
     type: str
+  log_config:
+    description:
+    - Denotes the logging options for the subnetwork flow logs. If logging is enabled
+      logs will be exported to Stackdriver.
+    required: false
+    type: dict
+    version_added: '2.10'
+    suboptions:
+      aggregation_interval:
+        description:
+        - Can only be specified if VPC flow logging for this subnetwork is enabled.
+        - Toggles the aggregation interval for collecting flow logs. Increasing the
+          interval time will reduce the amount of generated flow logs for long lasting
+          connections. Default is an interval of 5 seconds per connection.
+        - Possible values are INTERVAL_5_SEC, INTERVAL_30_SEC, INTERVAL_1_MIN, INTERVAL_5_MIN,
+          INTERVAL_10_MIN, INTERVAL_15_MIN .
+        - 'Some valid choices include: "INTERVAL_5_SEC", "INTERVAL_30_SEC", "INTERVAL_1_MIN",
+          "INTERVAL_5_MIN", "INTERVAL_10_MIN", "INTERVAL_15_MIN"'
+        required: false
+        default: INTERVAL_5_SEC
+        type: str
+      flow_sampling:
+        description:
+        - Can only be specified if VPC flow logging for this subnetwork is enabled.
+        - The value of the field must be in [0, 1]. Set the sampling rate of VPC flow
+          logs within the subnetwork where 1.0 means all collected logs are reported
+          and 0.0 means no logs are reported. Default is 0.5 which means half of all
+          collected logs are reported.
+        required: false
+        default: '0.5'
+        type: str
+      metadata:
+        description:
+        - Can only be specified if VPC flow logging for this subnetwork is enabled.
+        - Configures whether metadata fields should be added to the reported VPC flow
+          logs. Default is `INCLUDE_ALL_METADATA`.
+        - 'Some valid choices include: "EXCLUDE_ALL_METADATA", "INCLUDE_ALL_METADATA"'
+        required: false
+        default: INCLUDE_ALL_METADATA
+        type: str
   project:
     description:
     - The Google Cloud Platform project to use.
@@ -308,6 +348,39 @@ region:
   - URL of the GCP region for this subnetwork.
   returned: success
   type: str
+logConfig:
+  description:
+  - Denotes the logging options for the subnetwork flow logs. If logging is enabled
+    logs will be exported to Stackdriver.
+  returned: success
+  type: complex
+  contains:
+    aggregationInterval:
+      description:
+      - Can only be specified if VPC flow logging for this subnetwork is enabled.
+      - Toggles the aggregation interval for collecting flow logs. Increasing the
+        interval time will reduce the amount of generated flow logs for long lasting
+        connections. Default is an interval of 5 seconds per connection.
+      - Possible values are INTERVAL_5_SEC, INTERVAL_30_SEC, INTERVAL_1_MIN, INTERVAL_5_MIN,
+        INTERVAL_10_MIN, INTERVAL_15_MIN .
+      returned: success
+      type: str
+    flowSampling:
+      description:
+      - Can only be specified if VPC flow logging for this subnetwork is enabled.
+      - The value of the field must be in [0, 1]. Set the sampling rate of VPC flow
+        logs within the subnetwork where 1.0 means all collected logs are reported
+        and 0.0 means no logs are reported. Default is 0.5 which means half of all
+        collected logs are reported.
+      returned: success
+      type: str
+    metadata:
+      description:
+      - Can only be specified if VPC flow logging for this subnetwork is enabled.
+      - Configures whether metadata fields should be added to the reported VPC flow
+        logs. Default is `INCLUDE_ALL_METADATA`.
+      returned: success
+      type: str
 '''
 
 ################################################################################
@@ -346,6 +419,14 @@ def main():
             ),
             private_ip_google_access=dict(type='bool'),
             region=dict(required=True, type='str'),
+            log_config=dict(
+                type='dict',
+                options=dict(
+                    aggregation_interval=dict(default='INTERVAL_5_SEC', type='str'),
+                    flow_sampling=dict(default=0.5, type='str'),
+                    metadata=dict(default='INCLUDE_ALL_METADATA', type='str'),
+                ),
+            ),
         )
     )
 
@@ -393,7 +474,11 @@ def update(module, link, kind, fetch):
 def update_fields(module, request, response):
     if response.get('ipCidrRange') != request.get('ipCidrRange'):
         ip_cidr_range_update(module, request, response)
-    if response.get('enableFlowLogs') != request.get('enableFlowLogs') or response.get('secondaryIpRanges') != request.get('secondaryIpRanges'):
+    if (
+        response.get('enableFlowLogs') != request.get('enableFlowLogs')
+        or response.get('secondaryIpRanges') != request.get('secondaryIpRanges')
+        or response.get('logConfig') != request.get('logConfig')
+    ):
         enable_flow_logs_update(module, request, response)
     if response.get('privateIpGoogleAccess') != request.get('privateIpGoogleAccess'):
         private_ip_google_access_update(module, request, response)
@@ -415,6 +500,7 @@ def enable_flow_logs_update(module, request, response):
             u'enableFlowLogs': module.params.get('enable_flow_logs'),
             u'fingerprint': response.get('fingerprint'),
             u'secondaryIpRanges': SubnetworkSecondaryiprangesArray(module.params.get('secondary_ip_ranges', []), module).to_request(),
+            u'logConfig': SubnetworkLogconfig(module.params.get('log_config', {}), module).to_request(),
         },
     )
 
@@ -445,6 +531,7 @@ def resource_to_request(module):
         u'secondaryIpRanges': SubnetworkSecondaryiprangesArray(module.params.get('secondary_ip_ranges', []), module).to_request(),
         u'privateIpGoogleAccess': module.params.get('private_ip_google_access'),
         u'region': module.params.get('region'),
+        u'logConfig': SubnetworkLogconfig(module.params.get('log_config', {}), module).to_request(),
     }
     return_vals = {}
     for k, v in request.items():
@@ -522,6 +609,7 @@ def response_to_hash(module, response):
         u'secondaryIpRanges': SubnetworkSecondaryiprangesArray(response.get(u'secondaryIpRanges', []), module).from_response(),
         u'privateIpGoogleAccess': response.get(u'privateIpGoogleAccess'),
         u'region': module.params.get('region'),
+        u'logConfig': SubnetworkLogconfig(response.get(u'logConfig', {}), module).from_response(),
     }
 
 
@@ -585,6 +673,33 @@ class SubnetworkSecondaryiprangesArray(object):
 
     def _response_from_item(self, item):
         return remove_nones_from_dict({u'rangeName': item.get(u'rangeName'), u'ipCidrRange': item.get(u'ipCidrRange')})
+
+
+class SubnetworkLogconfig(object):
+    def __init__(self, request, module):
+        self.module = module
+        if request:
+            self.request = request
+        else:
+            self.request = {}
+
+    def to_request(self):
+        return remove_nones_from_dict(
+            {
+                u'aggregationInterval': self.request.get('aggregation_interval'),
+                u'flowSampling': self.request.get('flow_sampling'),
+                u'metadata': self.request.get('metadata'),
+            }
+        )
+
+    def from_response(self):
+        return remove_nones_from_dict(
+            {
+                u'aggregationInterval': self.request.get(u'aggregationInterval'),
+                u'flowSampling': self.request.get(u'flowSampling'),
+                u'metadata': self.request.get(u'metadata'),
+            }
+        )
 
 
 if __name__ == '__main__':

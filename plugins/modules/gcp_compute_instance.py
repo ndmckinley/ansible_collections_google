@@ -577,11 +577,6 @@ EXAMPLES = '''
     - auto_delete: 'true'
       boot: 'true'
       source: "{{ disk }}"
-    - auto_delete: 'true'
-      interface: NVME
-      type: SCRATCH
-      initialize_params:
-        disk_type: local-ssd
     metadata:
       startup-script-url: gs:://graphite-playground/bootstrap.sh
       cost-center: '12345'

@@ -112,6 +112,11 @@ resources:
   returned: always
   type: complex
   contains:
+    id:
+      description:
+      - The unique identifier for the resource.
+      returned: success
+      type: int
     creationTimestamp:
       description:
       - Creation timestamp in RFC3339 text format.
@@ -119,13 +124,25 @@ resources:
       type: str
     defaultService:
       description:
-      - A reference to BackendService resource if none of the hostRules match.
+      - The BackendService resource to which traffic is directed if none of the hostRules
+        match. If defaultRouteAction is additionally specified, advanced routing actions
+        like URL Rewrites, etc. take effect prior to sending the request to the backend.
+        However, if defaultService is specified, defaultRouteAction cannot contain
+        any weightedBackendServices. Conversely, if routeAction specifies any weightedBackendServices,
+        service must not be specified. Only one of defaultService, defaultUrlRedirect
+        or defaultRouteAction.weightedBackendService must be set.
       returned: success
       type: dict
     description:
       description:
       - An optional description of this resource. Provide this property when you create
         the resource.
+      returned: success
+      type: str
+    fingerprint:
+      description:
+      - Fingerprint of this resource. A hash of the contents stored in this object.
+        This field is used in optimistic locking.
       returned: success
       type: str
     hostRules:
@@ -136,7 +153,7 @@ resources:
       contains:
         description:
           description:
-          - An optional description of this HostRule. Provide this property when you
+          - An optional description of this resource. Provide this property when you
             create the resource.
           returned: success
           type: str
@@ -153,17 +170,6 @@ resources:
             if the hostRule matches the URL's host portion.
           returned: success
           type: str
-    id:
-      description:
-      - The unique identifier for the resource.
-      returned: success
-      type: int
-    fingerprint:
-      description:
-      - Fingerprint of this resource. This field is used internally during updates
-        of this resource.
-      returned: success
-      type: str
     name:
       description:
       - Name of the resource. Provided by the client when the resource is created.
@@ -182,19 +188,26 @@ resources:
       contains:
         defaultService:
           description:
-          - A reference to a BackendService resource. This will be used if none of
-            the pathRules defined by this PathMatcher is matched by the URL's path
-            portion.
+          - 'The BackendService resource. This will be used if none of the pathRules
+            or routeRules defined by this PathMatcher are matched. For example, the
+            following are all valid URLs to a BackendService resource: - http s://U(www.googleapis.com/compute/v1/projects/project/global/backendServices/backen)
+            dService - compute/v1/projects/project/global/backendServices/backendService
+            - global/backendServices/backendService If defaultRouteAction is additionally
+            specified, advanced routing actions like URL Rewrites, etc. take effect
+            prior to sending the request to the backend. However, if defaultService
+            is specified, defaultRouteAction cannot contain any weightedBackendServices.
+            Conversely, if defaultRouteAction specifies any weightedBackendServices,
+            defaultService must not be specified. Only one of defaultService, defaultUrlRedirect
+            or defaultRouteAction.weightedBackendService must be set. Authorization
+            requires one or more of the following Google IAM permissions on the specified
+            resource default_service: - compute.backendBuckets.use - compute.backendServices.use
+            .'
           returned: success
           type: dict
         description:
           description:
-          - An optional description of this resource.
-          returned: success
-          type: str
-        name:
-          description:
-          - The name to which this PathMatcher is referred by the HostRule.
+          - An optional description of this resource. Provide this property when you
+            create the resource.
           returned: success
           type: str
         pathRules:
@@ -216,10 +229,16 @@ resources:
               - A reference to the BackendService resource if this rule is matched.
               returned: success
               type: dict
+        name:
+          description:
+          - The name to which this PathMatcher is referred by the HostRule.
+          returned: success
+          type: str
     tests:
       description:
-      - The list of expected URL mappings. Requests to update this UrlMap will succeed
-        only if all of the test cases pass.
+      - The list of expected URL mapping tests. Request to update this UrlMap will
+        succeed only if all of the test cases pass. You can specify a maximum of 100
+        tests per UrlMap.
       returned: success
       type: complex
       contains:
@@ -240,8 +259,7 @@ resources:
           type: str
         service:
           description:
-          - A reference to expected BackendService resource the given URL should be
-            mapped to.
+          - Expected BackendService resource the given URL should be mapped to.
           returned: success
           type: dict
 '''

@@ -18,14 +18,15 @@
 # ----------------------------------------------------------------------------
 
 from __future__ import absolute_import, division, print_function
-
 __metaclass__ = type
 
 ################################################################################
 # Documentation
 ################################################################################
 
-ANSIBLE_METADATA = {'metadata_version': '1.1', 'status': ["preview"], 'supported_by': 'community'}
+ANSIBLE_METADATA = {'metadata_version': '1.1',
+                    'status': ["preview"],
+                    'supported_by': 'community'}
 
 DOCUMENTATION = '''
 ---
@@ -33,7 +34,7 @@ module: gcp_spanner_database
 description:
 - A Cloud Spanner Database which is hosted on a Spanner instance.
 short_description: Creates a GCP Database
-version_added: 2.7
+version_added: '2.7'
 author: Google Inc. (@googlecloudplatform)
 requirements:
 - python >= 2.6
@@ -72,15 +73,61 @@ options:
       }}"'
     required: true
     type: dict
-extends_documentation_fragment: gcp
+  project:
+    description:
+    - The Google Cloud Platform project to use.
+    type: str
+  auth_kind:
+    description:
+    - The type of credential used.
+    type: str
+    required: true
+    choices:
+    - application
+    - machineaccount
+    - serviceaccount
+  service_account_contents:
+    description:
+    - The contents of a Service Account JSON file, either in a dictionary or as a
+      JSON string that represents it.
+    type: jsonarg
+  service_account_file:
+    description:
+    - The path of a Service Account JSON file if serviceaccount is selected as type.
+    type: path
+  service_account_email:
+    description:
+    - An optional service account email address if machineaccount is selected and
+      the user does not wish to use the default email.
+    type: str
+  scopes:
+    description:
+    - Array of scopes to be used
+    type: list
+  env_type:
+    description:
+    - Specifies which Ansible environment you're running this module within.
+    - This should not be set unless you know what you're doing.
+    - This only alters the User Agent string for any API requests.
+    type: str
 notes:
 - 'API Reference: U(https://cloud.google.com/spanner/docs/reference/rest/v1/projects.instances.databases)'
 - 'Official Documentation: U(https://cloud.google.com/spanner/)'
+- for authentication, you can set service_account_file using the C(gcp_service_account_file)
+  env variable.
+- for authentication, you can set service_account_contents using the C(GCP_SERVICE_ACCOUNT_CONTENTS)
+  env variable.
+- For authentication, you can set service_account_email using the C(GCP_SERVICE_ACCOUNT_EMAIL)
+  env variable.
+- For authentication, you can set auth_kind using the C(GCP_AUTH_KIND) env variable.
+- For authentication, you can set scopes using the C(GCP_SCOPES) env variable.
+- Environment variables values will only be used if the playbook values are not set.
+- The I(service_account_email) and I(service_account_file) options are mutually exclusive.
 '''
 
 EXAMPLES = '''
 - name: create a instance
-  gcp_spanner_instance:
+  google.cloud.gcp_spanner_instance:
     name: instance-database
     display_name: My Spanner Instance
     node_count: 2
@@ -94,7 +141,7 @@ EXAMPLES = '''
   register: instance
 
 - name: create a database
-  gcp_spanner_database:
+  google.cloud.gcp_spanner_database:
     name: webstore
     instance: "{{ instance }}"
     project: test_project
@@ -129,7 +176,7 @@ instance:
 # Imports
 ################################################################################
 
-from ansible.module_utils.gcp_utils import navigate_hash, GcpSession, GcpModule, GcpRequest, replace_resource_dict
+from ansible_collections.google.cloud.plugins.module_utils.gcp_utils import navigate_hash, GcpSession, GcpModule, GcpRequest, replace_resource_dict
 import json
 import time
 
@@ -142,13 +189,7 @@ def main():
     """Main function"""
 
     module = GcpModule(
-        argument_spec=dict(
-            state=dict(default='present', choices=['present', 'absent'], type='str'),
-            name=dict(required=True, type='str'),
-            extra_statements=dict(type='list', elements='str'),
-            instance=dict(required=True, type='dict'),
-        )
-    )
+        argument_spec=dict(state=dict(default='present', choices=['present', 'absent'], type='str'), name=dict(required=True, type='str'), extra_statements=dict(type='list', elements='str'), instance=dict(required=True, type='dict')))
 
     if not module.params['scopes']:
         module.params['scopes'] = ['https://www.googleapis.com/auth/spanner.admin']
@@ -159,7 +200,7 @@ def main():
     changed = False
 
     if 'instance' in module.params and 'name' in module.params['instance']:
-        module.params['instance']['name'] = module.params['instance']['name'].split('/')[-1]
+      module.params['instance']['name'] = module.params['instance']['name'].split('/')[-1]
 
     if fetch:
         if state == 'present':
@@ -198,7 +239,7 @@ def delete(module, link):
 
 
 def resource_to_request(module):
-    request = {u'name': module.params.get('name'), u'extraStatements': module.params.get('extra_statements')}
+    request = { u'name': module.params.get('name'),u'extraStatements': module.params.get('extra_statements') }
     request = encode_request(request, module)
     return_vals = {}
     for k, v in request.items():
@@ -214,12 +255,19 @@ def fetch_resource(module, link, allow_not_found=True):
 
 
 def self_link(module):
-    res = {'project': module.params['project'], 'instance': replace_resource_dict(module.params['instance'], 'name'), 'name': module.params['name']}
+    res = {
+        'project': module.params['project'],
+        'instance': replace_resource_dict(module.params['instance'], 'name'),
+        'name': module.params['name']
+    }
     return "https://spanner.googleapis.com/v1/projects/{project}/instances/{instance}/databases/{name}".format(**res)
 
 
 def collection(module):
-    res = {'project': module.params['project'], 'instance': replace_resource_dict(module.params['instance'], 'name')}
+    res = {
+        'project': module.params['project'],
+        'instance': replace_resource_dict(module.params['instance'], 'name')
+    }
     return "https://spanner.googleapis.com/v1/projects/{project}/instances/{instance}/databases".format(**res)
 
 
@@ -268,7 +316,7 @@ def is_different(module, response):
 # Remove unnecessary properties from the response.
 # This is for doing comparisons with Ansible's current parameters.
 def response_to_hash(module, response):
-    return {u'name': module.params.get('name'), u'extraStatements': module.params.get('extra_statements')}
+    return { u'name': module.params.get('name'),u'extraStatements': module.params.get('extra_statements') }
 
 
 def async_op_url(module, extra_data=None):

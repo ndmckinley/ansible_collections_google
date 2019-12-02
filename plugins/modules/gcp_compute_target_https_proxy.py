@@ -18,14 +18,15 @@
 # ----------------------------------------------------------------------------
 
 from __future__ import absolute_import, division, print_function
-
 __metaclass__ = type
 
 ################################################################################
 # Documentation
 ################################################################################
 
-ANSIBLE_METADATA = {'metadata_version': '1.1', 'status': ["preview"], 'supported_by': 'community'}
+ANSIBLE_METADATA = {'metadata_version': '1.1',
+                    'status': ["preview"],
+                    'supported_by': 'community'}
 
 DOCUMENTATION = '''
 ---
@@ -34,7 +35,7 @@ description:
 - Represents a TargetHttpsProxy resource, which is used by one or more global forwarding
   rule to route incoming HTTPS requests to a URL map.
 short_description: Creates a GCP TargetHttpsProxy
-version_added: 2.6
+version_added: '2.6'
 author: Google Inc. (@googlecloudplatform)
 requirements:
 - python >= 2.6
@@ -74,7 +75,7 @@ options:
     - 'Some valid choices include: "NONE", "ENABLE", "DISABLE"'
     required: false
     type: str
-    version_added: 2.7
+    version_added: '2.7'
   ssl_certificates:
     description:
     - A list of SslCertificate resources that are used to authenticate connections
@@ -94,7 +95,7 @@ options:
       }}"'
     required: false
     type: dict
-    version_added: 2.8
+    version_added: '2.8'
   url_map:
     description:
     - A reference to the UrlMap resource that defines the mapping from URL to the
@@ -106,15 +107,61 @@ options:
       }}"'
     required: true
     type: dict
-extends_documentation_fragment: gcp
+  project:
+    description:
+    - The Google Cloud Platform project to use.
+    type: str
+  auth_kind:
+    description:
+    - The type of credential used.
+    type: str
+    required: true
+    choices:
+    - application
+    - machineaccount
+    - serviceaccount
+  service_account_contents:
+    description:
+    - The contents of a Service Account JSON file, either in a dictionary or as a
+      JSON string that represents it.
+    type: jsonarg
+  service_account_file:
+    description:
+    - The path of a Service Account JSON file if serviceaccount is selected as type.
+    type: path
+  service_account_email:
+    description:
+    - An optional service account email address if machineaccount is selected and
+      the user does not wish to use the default email.
+    type: str
+  scopes:
+    description:
+    - Array of scopes to be used
+    type: list
+  env_type:
+    description:
+    - Specifies which Ansible environment you're running this module within.
+    - This should not be set unless you know what you're doing.
+    - This only alters the User Agent string for any API requests.
+    type: str
 notes:
 - 'API Reference: U(https://cloud.google.com/compute/docs/reference/v1/targetHttpsProxies)'
 - 'Official Documentation: U(https://cloud.google.com/compute/docs/load-balancing/http/target-proxies)'
+- for authentication, you can set service_account_file using the C(gcp_service_account_file)
+  env variable.
+- for authentication, you can set service_account_contents using the C(GCP_SERVICE_ACCOUNT_CONTENTS)
+  env variable.
+- For authentication, you can set service_account_email using the C(GCP_SERVICE_ACCOUNT_EMAIL)
+  env variable.
+- For authentication, you can set auth_kind using the C(GCP_AUTH_KIND) env variable.
+- For authentication, you can set scopes using the C(GCP_SCOPES) env variable.
+- Environment variables values will only be used if the playbook values are not set.
+- The I(service_account_email) and I(service_account_file) options are mutually exclusive.
 '''
 
 EXAMPLES = '''
 - name: create a instance group
-  gcp_compute_instance_group:
+  google.cloud.gcp_compute_instance_group:
     name: instancegroup-targethttpsproxy
     zone: us-central1-a
     project: "{{ gcp_project }}"
@@ -124,7 +171,7 @@ EXAMPLES = '''
   register: instancegroup
 
 - name: create a HTTP health check
-  gcp_compute_http_health_check:
+  google.cloud.gcp_compute_http_health_check:
     name: httphealthcheck-targethttpsproxy
     healthy_threshold: 10
     port: 8080
@@ -137,7 +184,7 @@ EXAMPLES = '''
   register: healthcheck
 
 - name: create a backend service
-  gcp_compute_backend_service:
+  google.cloud.gcp_compute_backend_service:
     name: backendservice-targethttpsproxy
     backends:
     - group: "{{ instancegroup.selfLink }}"
@@ -151,7 +198,7 @@ EXAMPLES = '''
   register: backendservice
 
 - name: create a URL map
-  gcp_compute_url_map:
+  google.cloud.gcp_compute_url_map:
     name: urlmap-targethttpsproxy
     default_service: "{{ backendservice }}"
     project: "{{ gcp_project }}"
@@ -161,7 +208,7 @@ EXAMPLES = '''
   register: urlmap
 
 - name: create a SSL certificate
-  gcp_compute_ssl_certificate:
+  google.cloud.gcp_compute_ssl_certificate:
     name: sslcert-targethttpsproxy
     description: A certificate for testing. Do not use this certificate in production
     certificate: |-
@@ -195,7 +242,7 @@ EXAMPLES = '''
   register: sslcert
 
 - name: create a target HTTPS proxy
-  gcp_compute_target_https_proxy:
+  google.cloud.gcp_compute_target_https_proxy:
     name: test_object
     ssl_certificates:
     - "{{ sslcert }}"
@@ -265,7 +312,7 @@ urlMap:
 # Imports
 ################################################################################
 
-from ansible.module_utils.gcp_utils import navigate_hash, GcpSession, GcpModule, GcpRequest, replace_resource_dict
+from ansible_collections.google.cloud.plugins.module_utils.gcp_utils import navigate_hash, GcpSession, GcpModule, GcpRequest, replace_resource_dict
 import json
 import time
 
@@ -278,16 +325,7 @@ def main():
     """Main function"""
 
     module = GcpModule(
-        argument_spec=dict(
-            state=dict(default='present', choices=['present', 'absent'], type='str'),
-            description=dict(type='str'),
-            name=dict(required=True, type='str'),
-            quic_override=dict(type='str'),
-            ssl_certificates=dict(required=True, type='list', elements='dict'),
-            ssl_policy=dict(type='dict'),
-            url_map=dict(required=True, type='dict'),
-        )
-    )
+        argument_spec=dict(state=dict(default='present', choices=['present', 'absent'], type='str'), description=dict(type='str'), name=dict(required=True, type='str'), quic_override=dict(type='str'), ssl_certificates=dict(required=True, type='list', elements='dict'), ssl_policy=dict(type='dict'), url_map=dict(required=True, type='dict')))
 
     if not module.params['scopes']:
         module.params['scopes'] = ['https://www.googleapis.com/auth/compute']
@@ -326,7 +364,8 @@ def create(module, link, kind):
 
 
 def update(module, link, kind, fetch):
-    update_fields(module, resource_to_request(module), response_to_hash(module, fetch))
+    update_fields(module, resource_to_request(module),
+                  response_to_hash(module, fetch))
     return fetch_resource(module, self_link(module), kind)
 
 
@@ -344,34 +383,42 @@ def update_fields(module, request, response):
 def quic_override_update(module, request, response):
     auth = GcpSession(module, 'compute')
     auth.post(
-        ''.join(["https://www.googleapis.com/compute/v1/", "projects/{project}/global/targetHttpsProxies/{name}/setQuicOverride"]).format(**module.params),
-        {u'quicOverride': module.params.get('quic_override')},
+        ''.join([
+            "https://www.googleapis.com/compute/v1/",
+            "projects/{project}/global/targetHttpsProxies/{name}/setQuicOverride"
+        ]).format(**module.params),
+{ u'quicOverride': module.params.get('quic_override') }
     )
-
 
 def ssl_certificates_update(module, request, response):
     auth = GcpSession(module, 'compute')
     auth.post(
-        ''.join(["https://www.googleapis.com/compute/v1/", "projects/{project}/targetHttpsProxies/{name}/setSslCertificates"]).format(**module.params),
-        {u'sslCertificates': replace_resource_dict(module.params.get('ssl_certificates', []), 'selfLink')},
+        ''.join([
+            "https://www.googleapis.com/compute/v1/",
+            "projects/{project}/targetHttpsProxies/{name}/setSslCertificates"
+        ]).format(**module.params),
+{ u'sslCertificates': replace_resource_dict(module.params.get('ssl_certificates', []), 'selfLink') }
     )
-
 
 def ssl_policy_update(module, request, response):
     auth = GcpSession(module, 'compute')
     auth.post(
-        ''.join(["https://www.googleapis.com/compute/v1/", "projects/{project}/global/targetHttpsProxies/{name}/setSslPolicy"]).format(**module.params),
-        {u'sslPolicy': replace_resource_dict(module.params.get(u'ssl_policy', {}), 'selfLink')},
+        ''.join([
+            "https://www.googleapis.com/compute/v1/",
+            "projects/{project}/global/targetHttpsProxies/{name}/setSslPolicy"
+        ]).format(**module.params),
+{ u'sslPolicy': replace_resource_dict(module.params.get(u'ssl_policy', {}), 'selfLink') }
     )
-
 
 def url_map_update(module, request, response):
     auth = GcpSession(module, 'compute')
     auth.post(
-        ''.join(["https://www.googleapis.com/compute/v1/", "projects/{project}/targetHttpsProxies/{name}/setUrlMap"]).format(**module.params),
-        {u'urlMap': replace_resource_dict(module.params.get(u'url_map', {}), 'selfLink')},
+        ''.join([
+            "https://www.googleapis.com/compute/v1/",
+            "projects/{project}/targetHttpsProxies/{name}/setUrlMap"
+        ]).format(**module.params),
+{ u'urlMap': replace_resource_dict(module.params.get(u'url_map', {}), 'selfLink') }
     )
-
 
 def delete(module, link, kind):
     auth = GcpSession(module, 'compute')
@@ -379,15 +426,7 @@ def delete(module, link, kind):
 
 
 def resource_to_request(module):
-    request = {
-        u'kind': 'compute#targetHttpsProxy',
-        u'description': module.params.get('description'),
-        u'name': module.params.get('name'),
-        u'quicOverride': module.params.get('quic_override'),
-        u'sslCertificates': replace_resource_dict(module.params.get('ssl_certificates', []), 'selfLink'),
-        u'sslPolicy': replace_resource_dict(module.params.get(u'ssl_policy', {}), 'selfLink'),
-        u'urlMap': replace_resource_dict(module.params.get(u'url_map', {}), 'selfLink'),
-    }
+    request = { u'kind': 'compute#targetHttpsProxy',u'description': module.params.get('description'),u'name': module.params.get('name'),u'quicOverride': module.params.get('quic_override'),u'sslCertificates': replace_resource_dict(module.params.get('ssl_certificates', []), 'selfLink'),u'sslPolicy': replace_resource_dict(module.params.get(u'ssl_policy', {}), 'selfLink'),u'urlMap': replace_resource_dict(module.params.get(u'url_map', {}), 'selfLink') }
     return_vals = {}
     for k, v in request.items():
         if v or v is False:
@@ -451,16 +490,7 @@ def is_different(module, response):
 # Remove unnecessary properties from the response.
 # This is for doing comparisons with Ansible's current parameters.
 def response_to_hash(module, response):
-    return {
-        u'creationTimestamp': response.get(u'creationTimestamp'),
-        u'description': module.params.get('description'),
-        u'id': response.get(u'id'),
-        u'name': module.params.get('name'),
-        u'quicOverride': response.get(u'quicOverride'),
-        u'sslCertificates': response.get(u'sslCertificates'),
-        u'sslPolicy': response.get(u'sslPolicy'),
-        u'urlMap': response.get(u'urlMap'),
-    }
+    return { u'creationTimestamp': response.get(u'creationTimestamp'),u'description': module.params.get('description'),u'id': response.get(u'id'),u'name': module.params.get('name'),u'quicOverride': response.get(u'quicOverride'),u'sslCertificates': response.get(u'sslCertificates'),u'sslPolicy': response.get(u'sslPolicy'),u'urlMap': response.get(u'urlMap') }
 
 
 def async_op_url(module, extra_data=None):
@@ -479,7 +509,6 @@ def wait_for_operation(module, response):
     status = navigate_hash(op_result, ['status'])
     wait_done = wait_for_completion(status, op_result, module)
     return fetch_resource(module, navigate_hash(wait_done, ['targetLink']), 'compute#targetHttpsProxy')
-
 
 def wait_for_completion(status, op_result, module):
     op_id = navigate_hash(op_result, ['name'])

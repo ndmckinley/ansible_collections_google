@@ -18,14 +18,15 @@
 # ----------------------------------------------------------------------------
 
 from __future__ import absolute_import, division, print_function
-
 __metaclass__ = type
 
 ################################################################################
 # Documentation
 ################################################################################
 
-ANSIBLE_METADATA = {'metadata_version': '1.1', 'status': ["preview"], 'supported_by': 'community'}
+ANSIBLE_METADATA = {'metadata_version': '1.1',
+                    'status': ["preview"],
+                    'supported_by': 'community'}
 
 DOCUMENTATION = '''
 ---
@@ -40,7 +41,7 @@ description:
   incoming traffic. For all networks except the default network, you must create any
   firewall rules you need.
 short_description: Creates a GCP Firewall
-version_added: 2.6
+version_added: '2.6'
 author: Google Inc. (@googlecloudplatform)
 requirements:
 - python >= 2.6
@@ -85,7 +86,7 @@ options:
       and port-range tuple that describes a denied connection.
     required: false
     type: list
-    version_added: 2.8
+    version_added: '2.8'
     suboptions:
       ip_protocol:
         description:
@@ -117,7 +118,7 @@ options:
       in CIDR format. Only IPv4 is supported.
     required: false
     type: list
-    version_added: 2.8
+    version_added: '2.8'
   direction:
     description:
     - 'Direction of traffic to which this firewall applies; default is INGRESS. Note:
@@ -126,7 +127,7 @@ options:
     - 'Some valid choices include: "INGRESS", "EGRESS"'
     required: false
     type: str
-    version_added: 2.8
+    version_added: '2.8'
   disabled:
     description:
     - Denotes whether the firewall rule is disabled, i.e not applied to the network
@@ -135,7 +136,7 @@ options:
       rule will be enabled.
     required: false
     type: bool
-    version_added: 2.8
+    version_added: '2.8'
   name:
     description:
     - Name of the resource. Provided by the client when the resource is created. The
@@ -173,7 +174,7 @@ options:
     required: false
     default: '1000'
     type: int
-    version_added: 2.8
+    version_added: '2.8'
   source_ranges:
     description:
     - If source ranges are specified, the firewall will apply only to traffic that
@@ -198,7 +199,7 @@ options:
       sourceServiceAccounts cannot be used at the same time as sourceTags or targetTags.
     required: false
     type: list
-    version_added: 2.8
+    version_added: '2.8'
   source_tags:
     description:
     - If source tags are specified, the firewall will apply only to traffic with source
@@ -220,7 +221,7 @@ options:
       rule applies to all instances on the specified network.
     required: false
     type: list
-    version_added: 2.8
+    version_added: '2.8'
   target_tags:
     description:
     - A list of instance tags indicating sets of instances located in the network
@@ -229,15 +230,61 @@ options:
       the specified network.
     required: false
     type: list
-extends_documentation_fragment: gcp
+  project:
+    description:
+    - The Google Cloud Platform project to use.
+    type: str
+  auth_kind:
+    description:
+    - The type of credential used.
+    type: str
+    required: true
+    choices:
+    - application
+    - machineaccount
+    - serviceaccount
+  service_account_contents:
+    description:
+    - The contents of a Service Account JSON file, either in a dictionary or as a
+      JSON string that represents it.
+    type: jsonarg
+  service_account_file:
+    description:
+    - The path of a Service Account JSON file if serviceaccount is selected as type.
+    type: path
+  service_account_email:
+    description:
+    - An optional service account email address if machineaccount is selected and
+      the user does not wish to use the default email.
+    type: str
+  scopes:
+    description:
+    - Array of scopes to be used
+    type: list
+  env_type:
+    description:
+    - Specifies which Ansible environment you're running this module within.
+    - This should not be set unless you know what you're doing.
+    - This only alters the User Agent string for any API requests.
+    type: str
 notes:
 - 'API Reference: U(https://cloud.google.com/compute/docs/reference/v1/firewalls)'
 - 'Official Documentation: U(https://cloud.google.com/vpc/docs/firewalls)'
+- for authentication, you can set service_account_file using the C(gcp_service_account_file)
+  env variable.
+- for authentication, you can set service_account_contents using the C(GCP_SERVICE_ACCOUNT_CONTENTS)
+  env variable.
+- For authentication, you can set service_account_email using the C(GCP_SERVICE_ACCOUNT_EMAIL)
+  env variable.
+- For authentication, you can set auth_kind using the C(GCP_AUTH_KIND) env variable.
+- For authentication, you can set scopes using the C(GCP_SCOPES) env variable.
+- Environment variables values will only be used if the playbook values are not set.
+- The I(service_account_email) and I(service_account_file) options are mutually exclusive.
 '''
 
 EXAMPLES = '''
 - name: create a firewall
-  gcp_compute_firewall:
+  google.cloud.gcp_compute_firewall:
     name: test_object
     allowed:
     - ip_protocol: tcp
@@ -427,7 +474,7 @@ targetTags:
 # Imports
 ################################################################################
 
-from ansible.module_utils.gcp_utils import navigate_hash, GcpSession, GcpModule, GcpRequest, remove_nones_from_dict, replace_resource_dict
+from ansible_collections.google.cloud.plugins.module_utils.gcp_utils import navigate_hash, GcpSession, GcpModule, GcpRequest, remove_nones_from_dict, replace_resource_dict
 import json
 import re
 import time
@@ -441,33 +488,7 @@ def main():
     """Main function"""
 
     module = GcpModule(
-        argument_spec=dict(
-            state=dict(default='present', choices=['present', 'absent'], type='str'),
-            allowed=dict(type='list', elements='dict', options=dict(ip_protocol=dict(required=True, type='str'), ports=dict(type='list', elements='str'))),
-            denied=dict(type='list', elements='dict', options=dict(ip_protocol=dict(required=True, type='str'), ports=dict(type='list', elements='str'))),
-            description=dict(type='str'),
-            destination_ranges=dict(type='list', elements='str'),
-            direction=dict(type='str'),
-            disabled=dict(type='bool'),
-            name=dict(required=True, type='str'),
-            network=dict(default=dict(selfLink='global/networks/default'), type='dict'),
-            priority=dict(default=1000, type='int'),
-            source_ranges=dict(type='list', elements='str'),
-            source_service_accounts=dict(type='list', elements='str'),
-            source_tags=dict(type='list', elements='str'),
-            target_service_accounts=dict(type='list', elements='str'),
-            target_tags=dict(type='list', elements='str'),
-        ),
-        mutually_exclusive=[
-            ['allowed', 'denied'],
-            ['destination_ranges', 'source_ranges', 'source_tags'],
-            ['destination_ranges', 'source_ranges'],
-            ['source_service_accounts', 'source_tags', 'target_tags'],
-            ['destination_ranges', 'source_service_accounts', 'source_tags', 'target_service_accounts'],
-            ['source_tags', 'target_service_accounts', 'target_tags'],
-            ['source_service_accounts', 'target_service_accounts', 'target_tags'],
-        ],
-    )
+        argument_spec=dict(state=dict(default='present', choices=['present', 'absent'], type='str'), allowed=dict(type='list', elements='dict', options=dict(ip_protocol=dict(required=True, type='str'), ports=dict(type='list', elements='str'))), denied=dict(type='list', elements='dict', options=dict(ip_protocol=dict(required=True, type='str'), ports=dict(type='list', elements='str'))), description=dict(type='str'), destination_ranges=dict(type='list', elements='str'), direction=dict(type='str'), disabled=dict(type='bool'), name=dict(required=True, type='str'), network=dict(default=dict(selfLink='global/networks/default'), type='dict'), priority=dict(default=1000, type='int'), source_ranges=dict(type='list', elements='str'), source_service_accounts=dict(type='list', elements='str'), source_tags=dict(type='list', elements='str'), target_service_accounts=dict(type='list', elements='str'), target_tags=dict(type='list', elements='str')), mutually_exclusive=[['destination_ranges', 'source_ranges', 'source_tags'], ['destination_ranges', 'source_ranges'], ['source_service_accounts', 'source_tags', 'target_tags'], ['destination_ranges', 'source_service_accounts', 'source_tags', 'target_service_accounts'], ['source_tags', 'target_service_accounts', 'target_tags'], ['source_service_accounts', 'target_service_accounts', 'target_tags']])
 
     if not module.params['scopes']:
         module.params['scopes'] = ['https://www.googleapis.com/auth/compute']
@@ -516,23 +537,7 @@ def delete(module, link, kind):
 
 
 def resource_to_request(module):
-    request = {
-        u'kind': 'compute#firewall',
-        u'allowed': FirewallAllowedArray(module.params.get('allowed', []), module).to_request(),
-        u'denied': FirewallDeniedArray(module.params.get('denied', []), module).to_request(),
-        u'description': module.params.get('description'),
-        u'destinationRanges': module.params.get('destination_ranges'),
-        u'direction': module.params.get('direction'),
-        u'disabled': module.params.get('disabled'),
-        u'name': module.params.get('name'),
-        u'network': replace_resource_dict(module.params.get(u'network', {}), 'selfLink'),
-        u'priority': module.params.get('priority'),
-        u'sourceRanges': module.params.get('source_ranges'),
-        u'sourceServiceAccounts': module.params.get('source_service_accounts'),
-        u'sourceTags': module.params.get('source_tags'),
-        u'targetServiceAccounts': module.params.get('target_service_accounts'),
-        u'targetTags': module.params.get('target_tags'),
-    }
+    request = { u'kind': 'compute#firewall',u'allowed': FirewallAllowedArray(module.params.get('allowed', []), module).to_request(),u'denied': FirewallDeniedArray(module.params.get('denied', []), module).to_request(),u'description': module.params.get('description'),u'destinationRanges': module.params.get('destination_ranges'),u'direction': module.params.get('direction'),u'disabled': module.params.get('disabled'),u'name': module.params.get('name'),u'network': replace_resource_dict(module.params.get(u'network', {}), 'selfLink'),u'priority': module.params.get('priority'),u'sourceRanges': module.params.get('source_ranges'),u'sourceServiceAccounts': module.params.get('source_service_accounts'),u'sourceTags': module.params.get('source_tags'),u'targetServiceAccounts': module.params.get('target_service_accounts'),u'targetTags': module.params.get('target_tags') }
     request = encode_request(request, module)
     return_vals = {}
     for k, v in request.items():
@@ -597,24 +602,7 @@ def is_different(module, response):
 # Remove unnecessary properties from the response.
 # This is for doing comparisons with Ansible's current parameters.
 def response_to_hash(module, response):
-    return {
-        u'allowed': FirewallAllowedArray(response.get(u'allowed', []), module).from_response(),
-        u'creationTimestamp': response.get(u'creationTimestamp'),
-        u'denied': FirewallDeniedArray(response.get(u'denied', []), module).from_response(),
-        u'description': response.get(u'description'),
-        u'destinationRanges': response.get(u'destinationRanges'),
-        u'direction': response.get(u'direction'),
-        u'disabled': response.get(u'disabled'),
-        u'id': response.get(u'id'),
-        u'name': module.params.get('name'),
-        u'network': response.get(u'network'),
-        u'priority': response.get(u'priority'),
-        u'sourceRanges': response.get(u'sourceRanges'),
-        u'sourceServiceAccounts': response.get(u'sourceServiceAccounts'),
-        u'sourceTags': response.get(u'sourceTags'),
-        u'targetServiceAccounts': response.get(u'targetServiceAccounts'),
-        u'targetTags': response.get(u'targetTags'),
-    }
+    return { u'allowed': FirewallAllowedArray(response.get(u'allowed', []), module).from_response(),u'creationTimestamp': response.get(u'creationTimestamp'),u'denied': FirewallDeniedArray(response.get(u'denied', []), module).from_response(),u'description': response.get(u'description'),u'destinationRanges': response.get(u'destinationRanges'),u'direction': response.get(u'direction'),u'disabled': response.get(u'disabled'),u'id': response.get(u'id'),u'name': module.params.get('name'),u'network': response.get(u'network'),u'priority': response.get(u'priority'),u'sourceRanges': response.get(u'sourceRanges'),u'sourceServiceAccounts': response.get(u'sourceServiceAccounts'),u'sourceTags': response.get(u'sourceTags'),u'targetServiceAccounts': response.get(u'targetServiceAccounts'),u'targetTags': response.get(u'targetTags') }
 
 
 def async_op_url(module, extra_data=None):
@@ -633,7 +621,6 @@ def wait_for_operation(module, response):
     status = navigate_hash(op_result, ['status'])
     wait_done = wait_for_completion(status, op_result, module)
     return fetch_resource(module, navigate_hash(wait_done, ['targetLink']), 'compute#firewall')
-
 
 def wait_for_completion(status, op_result, module):
     op_id = navigate_hash(op_result, ['name'])
@@ -655,9 +642,8 @@ def raise_if_errors(response, err_path, module):
 def encode_request(request, module):
     if 'network' in request and request['network'] is not None:
         if not re.match(r'https://www.googleapis.com/compute/v1/projects/.*', request['network']):
-            request['network'] = 'https://www.googleapis.com/compute/v1/projects/{project}/{network}'.format(
-                project=module.params['project'], network=request['network']
-            )
+            request['network'] = 'https://www.googleapis.com/compute/v1/projects/{project}/{network}'.format(project=module.params['project'],
+                                                                                                             network=request['network'])
 
     return request
 
@@ -683,10 +669,12 @@ class FirewallAllowedArray(object):
         return items
 
     def _request_for_item(self, item):
-        return remove_nones_from_dict({u'IPProtocol': item.get('ip_protocol'), u'ports': item.get('ports')})
+        return remove_nones_from_dict({ u'IPProtocol': item.get('ip_protocol'),u'ports': item.get('ports') }
+)
 
     def _response_from_item(self, item):
-        return remove_nones_from_dict({u'IPProtocol': item.get(u'IPProtocol'), u'ports': item.get(u'ports')})
+        return remove_nones_from_dict({ u'IPProtocol': item.get(u'IPProtocol'),u'ports': item.get(u'ports') }
+)
 
 
 class FirewallDeniedArray(object):
@@ -710,10 +698,12 @@ class FirewallDeniedArray(object):
         return items
 
     def _request_for_item(self, item):
-        return remove_nones_from_dict({u'IPProtocol': item.get('ip_protocol'), u'ports': item.get('ports')})
+        return remove_nones_from_dict({ u'IPProtocol': item.get('ip_protocol'),u'ports': item.get('ports') }
+)
 
     def _response_from_item(self, item):
-        return remove_nones_from_dict({u'IPProtocol': item.get(u'IPProtocol'), u'ports': item.get(u'ports')})
+        return remove_nones_from_dict({ u'IPProtocol': item.get(u'IPProtocol'),u'ports': item.get(u'ports') }
+)
 
 
 if __name__ == '__main__':

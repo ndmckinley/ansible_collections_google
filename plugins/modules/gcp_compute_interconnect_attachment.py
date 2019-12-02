@@ -18,14 +18,15 @@
 # ----------------------------------------------------------------------------
 
 from __future__ import absolute_import, division, print_function
-
 __metaclass__ = type
 
 ################################################################################
 # Documentation
 ################################################################################
 
-ANSIBLE_METADATA = {'metadata_version': '1.1', 'status': ["preview"], 'supported_by': 'community'}
+ANSIBLE_METADATA = {'metadata_version': '1.1',
+                    'status': ["preview"],
+                    'supported_by': 'community'}
 
 DOCUMENTATION = '''
 ---
@@ -34,7 +35,7 @@ description:
 - Represents an InterconnectAttachment (VLAN attachment) resource. For more information,
   see Creating VLAN Attachments.
 short_description: Creates a GCP InterconnectAttachment
-version_added: 2.8
+version_added: '2.8'
 author: Google Inc. (@googlecloudplatform)
 requirements:
 - python >= 2.6
@@ -55,7 +56,7 @@ options:
       this will Pre-Activate the interconnect attachment .
     required: false
     type: bool
-    version_added: 2.9
+    version_added: '2.9'
   interconnect:
     description:
     - URL of the underlying Interconnect object that this attachment's traffic will
@@ -81,7 +82,7 @@ options:
       "BPS_50G"'
     required: false
     type: str
-    version_added: 2.9
+    version_added: '2.9'
   edge_availability_domain:
     description:
     - Desired availability domain for the attachment. Only available for type PARTNER,
@@ -143,12 +144,48 @@ options:
     - Region where the regional interconnect attachment resides.
     required: true
     type: str
-extends_documentation_fragment: gcp
+  project:
+    description:
+    - The Google Cloud Platform project to use.
+    type: str
+  auth_kind:
+    description:
+    - The type of credential used.
+    type: str
+    required: true
+    choices:
+    - application
+    - machineaccount
+    - serviceaccount
+  service_account_contents:
+    description:
+    - The contents of a Service Account JSON file, either in a dictionary or as a
+      JSON string that represents it.
+    type: jsonarg
+  service_account_file:
+    description:
+    - The path of a Service Account JSON file if serviceaccount is selected as type.
+    type: path
+  service_account_email:
+    description:
+    - An optional service account email address if machineaccount is selected and
+      the user does not wish to use the default email.
+    type: str
+  scopes:
+    description:
+    - Array of scopes to be used
+    type: list
+  env_type:
+    description:
+    - Specifies which Ansible environment you're running this module within.
+    - This should not be set unless you know what you're doing.
+    - This only alters the User Agent string for any API requests.
+    type: str
 '''
 
 EXAMPLES = '''
 - name: create a interconnect attachment
-  gcp_compute_interconnect_attachment:
+  google.cloud.gcp_compute_interconnect_attachment:
     name: test_object
     region: us-central1
     project: test_project
@@ -309,7 +346,7 @@ region:
 # Imports
 ################################################################################
 
-from ansible.module_utils.gcp_utils import navigate_hash, GcpSession, GcpModule, GcpRequest, remove_nones_from_dict, replace_resource_dict
+from ansible_collections.google.cloud.plugins.module_utils.gcp_utils import navigate_hash, GcpSession, GcpModule, GcpRequest, remove_nones_from_dict, replace_resource_dict
 import json
 import re
 import time
@@ -323,21 +360,7 @@ def main():
     """Main function"""
 
     module = GcpModule(
-        argument_spec=dict(
-            state=dict(default='present', choices=['present', 'absent'], type='str'),
-            admin_enabled=dict(type='bool'),
-            interconnect=dict(type='str'),
-            description=dict(type='str'),
-            bandwidth=dict(type='str'),
-            edge_availability_domain=dict(type='str'),
-            type=dict(type='str'),
-            router=dict(required=True, type='dict'),
-            name=dict(required=True, type='str'),
-            candidate_subnets=dict(type='list', elements='str'),
-            vlan_tag8021q=dict(type='int'),
-            region=dict(required=True, type='str'),
-        )
-    )
+        argument_spec=dict(state=dict(default='present', choices=['present', 'absent'], type='str'), admin_enabled=dict(type='bool'), interconnect=dict(type='str'), description=dict(type='str'), bandwidth=dict(type='str'), edge_availability_domain=dict(type='str'), type=dict(type='str'), router=dict(required=True, type='dict'), name=dict(required=True, type='str'), candidate_subnets=dict(type='list', elements='str'), vlan_tag8021q=dict(type='int'), region=dict(required=True, type='str')))
 
     if not module.params['scopes']:
         module.params['scopes'] = ['https://www.googleapis.com/auth/compute']
@@ -386,19 +409,7 @@ def delete(module, link, kind):
 
 
 def resource_to_request(module):
-    request = {
-        u'kind': 'compute#interconnectAttachment',
-        u'adminEnabled': module.params.get('admin_enabled'),
-        u'interconnect': module.params.get('interconnect'),
-        u'description': module.params.get('description'),
-        u'bandwidth': module.params.get('bandwidth'),
-        u'edgeAvailabilityDomain': module.params.get('edge_availability_domain'),
-        u'type': module.params.get('type'),
-        u'router': replace_resource_dict(module.params.get(u'router', {}), 'selfLink'),
-        u'name': module.params.get('name'),
-        u'candidateSubnets': module.params.get('candidate_subnets'),
-        u'vlanTag8021q': module.params.get('vlan_tag8021q'),
-    }
+    request = { u'kind': 'compute#interconnectAttachment',u'adminEnabled': module.params.get('admin_enabled'),u'interconnect': module.params.get('interconnect'),u'description': module.params.get('description'),u'bandwidth': module.params.get('bandwidth'),u'edgeAvailabilityDomain': module.params.get('edge_availability_domain'),u'type': module.params.get('type'),u'router': replace_resource_dict(module.params.get(u'router', {}), 'selfLink'),u'name': module.params.get('name'),u'candidateSubnets': module.params.get('candidate_subnets'),u'vlanTag8021q': module.params.get('vlan_tag8021q') }
     return_vals = {}
     for k, v in request.items():
         if v or v is False:
@@ -462,27 +473,7 @@ def is_different(module, response):
 # Remove unnecessary properties from the response.
 # This is for doing comparisons with Ansible's current parameters.
 def response_to_hash(module, response):
-    return {
-        u'adminEnabled': response.get(u'adminEnabled'),
-        u'cloudRouterIpAddress': response.get(u'cloudRouterIpAddress'),
-        u'customerRouterIpAddress': response.get(u'customerRouterIpAddress'),
-        u'interconnect': response.get(u'interconnect'),
-        u'description': response.get(u'description'),
-        u'bandwidth': response.get(u'bandwidth'),
-        u'edgeAvailabilityDomain': response.get(u'edgeAvailabilityDomain'),
-        u'pairingKey': response.get(u'pairingKey'),
-        u'partnerAsn': response.get(u'partnerAsn'),
-        u'privateInterconnectInfo': InterconnectAttachmentPrivateinterconnectinfo(response.get(u'privateInterconnectInfo', {}), module).from_response(),
-        u'type': response.get(u'type'),
-        u'state': response.get(u'state'),
-        u'googleReferenceId': response.get(u'googleReferenceId'),
-        u'router': response.get(u'router'),
-        u'creationTimestamp': response.get(u'creationTimestamp'),
-        u'id': response.get(u'id'),
-        u'name': response.get(u'name'),
-        u'candidateSubnets': response.get(u'candidateSubnets'),
-        u'vlanTag8021q': response.get(u'vlanTag8021q'),
-    }
+    return { u'adminEnabled': response.get(u'adminEnabled'),u'cloudRouterIpAddress': response.get(u'cloudRouterIpAddress'),u'customerRouterIpAddress': response.get(u'customerRouterIpAddress'),u'interconnect': response.get(u'interconnect'),u'description': response.get(u'description'),u'bandwidth': response.get(u'bandwidth'),u'edgeAvailabilityDomain': response.get(u'edgeAvailabilityDomain'),u'pairingKey': response.get(u'pairingKey'),u'partnerAsn': response.get(u'partnerAsn'),u'privateInterconnectInfo': InterconnectAttachmentPrivateinterconnectinfo(response.get(u'privateInterconnectInfo', {}), module).from_response(),u'type': response.get(u'type'),u'state': response.get(u'state'),u'googleReferenceId': response.get(u'googleReferenceId'),u'router': response.get(u'router'),u'creationTimestamp': response.get(u'creationTimestamp'),u'id': response.get(u'id'),u'name': response.get(u'name'),u'candidateSubnets': response.get(u'candidateSubnets'),u'vlanTag8021q': response.get(u'vlanTag8021q') }
 
 
 def region_selflink(name, params):
@@ -511,7 +502,6 @@ def wait_for_operation(module, response):
     wait_done = wait_for_completion(status, op_result, module)
     return fetch_resource(module, navigate_hash(wait_done, ['targetLink']), 'compute#interconnectAttachment')
 
-
 def wait_for_completion(status, op_result, module):
     op_id = navigate_hash(op_result, ['name'])
     op_uri = async_op_url(module, {'op_id': op_id})
@@ -538,10 +528,12 @@ class InterconnectAttachmentPrivateinterconnectinfo(object):
             self.request = {}
 
     def to_request(self):
-        return remove_nones_from_dict({})
+        return remove_nones_from_dict({  }
+)
 
     def from_response(self):
-        return remove_nones_from_dict({})
+        return remove_nones_from_dict({  }
+)
 
 
 if __name__ == '__main__':

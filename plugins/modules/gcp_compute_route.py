@@ -18,14 +18,15 @@
 # ----------------------------------------------------------------------------
 
 from __future__ import absolute_import, division, print_function
-
 __metaclass__ = type
 
 ################################################################################
 # Documentation
 ################################################################################
 
-ANSIBLE_METADATA = {'metadata_version': '1.1', 'status': ["preview"], 'supported_by': 'community'}
+ANSIBLE_METADATA = {'metadata_version': '1.1',
+                    'status': ["preview"],
+                    'supported_by': 'community'}
 
 DOCUMENTATION = '''
 ---
@@ -46,9 +47,9 @@ description:
   gateway. Packets that do not match any route in the sending virtual machine's routing
   table will be dropped.
 - A Route resource must have exactly one specification of either nextHopGateway, nextHopInstance,
-  nextHopIp, or nextHopVpnTunnel.
+  nextHopIp, nextHopVpnTunnel, or nextHopIlb.
 short_description: Creates a GCP Route
-version_added: 2.6
+version_added: '2.6'
 author: Google Inc. (@googlecloudplatform)
 requirements:
 - python >= 2.6
@@ -75,7 +76,7 @@ options:
       the resource.
     required: false
     type: str
-    version_added: 2.7
+    version_added: '2.7'
   name:
     description:
     - Name of the resource. Provided by the client when the resource is created. The
@@ -147,15 +148,61 @@ options:
       to "{{ name-of-resource }}"'
     required: false
     type: dict
-extends_documentation_fragment: gcp
+  project:
+    description:
+    - The Google Cloud Platform project to use.
+    type: str
+  auth_kind:
+    description:
+    - The type of credential used.
+    type: str
+    required: true
+    choices:
+    - application
+    - machineaccount
+    - serviceaccount
+  service_account_contents:
+    description:
+    - The contents of a Service Account JSON file, either in a dictionary or as a
+      JSON string that represents it.
+    type: jsonarg
+  service_account_file:
+    description:
+    - The path of a Service Account JSON file if serviceaccount is selected as type.
+    type: path
+  service_account_email:
+    description:
+    - An optional service account email address if machineaccount is selected and
+      the user does not wish to use the default email.
+    type: str
+  scopes:
+    description:
+    - Array of scopes to be used
+    type: list
+  env_type:
+    description:
+    - Specifies which Ansible environment you're running this module within.
+    - This should not be set unless you know what you're doing.
+    - This only alters the User Agent string for any API requests.
+    type: str
 notes:
 - 'API Reference: U(https://cloud.google.com/compute/docs/reference/rest/v1/routes)'
 - 'Using Routes: U(https://cloud.google.com/vpc/docs/using-routes)'
+- for authentication, you can set service_account_file using the C(gcp_service_account_file)
+  env variable.
+- for authentication, you can set service_account_contents using the C(GCP_SERVICE_ACCOUNT_CONTENTS)
+  env variable.
+- For authentication, you can set service_account_email using the C(GCP_SERVICE_ACCOUNT_EMAIL)
+  env variable.
+- For authentication, you can set auth_kind using the C(GCP_AUTH_KIND) env variable.
+- For authentication, you can set scopes using the C(GCP_SCOPES) env variable.
+- Environment variables values will only be used if the playbook values are not set.
+- The I(service_account_email) and I(service_account_file) options are mutually exclusive.
 '''
 
 EXAMPLES = '''
 - name: create a network
-  gcp_compute_network:
+  google.cloud.gcp_compute_network:
     name: network-route
     project: "{{ gcp_project }}"
     auth_kind: "{{ gcp_cred_kind }}"
@@ -164,7 +211,7 @@ EXAMPLES = '''
   register: network
 
 - name: create a route
-  gcp_compute_route:
+  google.cloud.gcp_compute_route:
     name: test_object
     dest_range: 192.168.6.0/24
     next_hop_gateway: global/gateways/default-internet-gateway
@@ -258,7 +305,7 @@ nextHopNetwork:
 # Imports
 ################################################################################
 
-from ansible.module_utils.gcp_utils import navigate_hash, GcpSession, GcpModule, GcpRequest, replace_resource_dict
+from ansible_collections.google.cloud.plugins.module_utils.gcp_utils import navigate_hash, GcpSession, GcpModule, GcpRequest, replace_resource_dict
 import json
 import time
 
@@ -271,20 +318,7 @@ def main():
     """Main function"""
 
     module = GcpModule(
-        argument_spec=dict(
-            state=dict(default='present', choices=['present', 'absent'], type='str'),
-            dest_range=dict(required=True, type='str'),
-            description=dict(type='str'),
-            name=dict(required=True, type='str'),
-            network=dict(required=True, type='dict'),
-            priority=dict(type='int'),
-            tags=dict(type='list', elements='str'),
-            next_hop_gateway=dict(type='str'),
-            next_hop_instance=dict(type='dict'),
-            next_hop_ip=dict(type='str'),
-            next_hop_vpn_tunnel=dict(type='dict'),
-        )
-    )
+        argument_spec=dict(state=dict(default='present', choices=['present', 'absent'], type='str'), dest_range=dict(required=True, type='str'), description=dict(type='str'), name=dict(required=True, type='str'), network=dict(required=True, type='dict'), priority=dict(type='int'), tags=dict(type='list', elements='str'), next_hop_gateway=dict(type='str'), next_hop_instance=dict(type='dict'), next_hop_ip=dict(type='str'), next_hop_vpn_tunnel=dict(type='dict')))
 
     if not module.params['scopes']:
         module.params['scopes'] = ['https://www.googleapis.com/auth/compute']
@@ -333,19 +367,7 @@ def delete(module, link, kind):
 
 
 def resource_to_request(module):
-    request = {
-        u'kind': 'compute#route',
-        u'destRange': module.params.get('dest_range'),
-        u'description': module.params.get('description'),
-        u'name': module.params.get('name'),
-        u'network': replace_resource_dict(module.params.get(u'network', {}), 'selfLink'),
-        u'priority': module.params.get('priority'),
-        u'tags': module.params.get('tags'),
-        u'nextHopGateway': module.params.get('next_hop_gateway'),
-        u'nextHopInstance': replace_resource_dict(module.params.get(u'next_hop_instance', {}), 'selfLink'),
-        u'nextHopIp': module.params.get('next_hop_ip'),
-        u'nextHopVpnTunnel': replace_resource_dict(module.params.get(u'next_hop_vpn_tunnel', {}), 'selfLink'),
-    }
+    request = { u'kind': 'compute#route',u'destRange': module.params.get('dest_range'),u'description': module.params.get('description'),u'name': module.params.get('name'),u'network': replace_resource_dict(module.params.get(u'network', {}), 'selfLink'),u'priority': module.params.get('priority'),u'tags': module.params.get('tags'),u'nextHopGateway': module.params.get('next_hop_gateway'),u'nextHopInstance': replace_resource_dict(module.params.get(u'next_hop_instance', {}), 'selfLink'),u'nextHopIp': module.params.get('next_hop_ip'),u'nextHopVpnTunnel': replace_resource_dict(module.params.get(u'next_hop_vpn_tunnel', {}), 'selfLink') }
     return_vals = {}
     for k, v in request.items():
         if v or v is False:
@@ -409,19 +431,7 @@ def is_different(module, response):
 # Remove unnecessary properties from the response.
 # This is for doing comparisons with Ansible's current parameters.
 def response_to_hash(module, response):
-    return {
-        u'destRange': response.get(u'destRange'),
-        u'description': response.get(u'description'),
-        u'name': response.get(u'name'),
-        u'network': replace_resource_dict(module.params.get(u'network', {}), 'selfLink'),
-        u'priority': module.params.get('priority'),
-        u'tags': module.params.get('tags'),
-        u'nextHopGateway': module.params.get('next_hop_gateway'),
-        u'nextHopInstance': replace_resource_dict(module.params.get(u'next_hop_instance', {}), 'selfLink'),
-        u'nextHopIp': module.params.get('next_hop_ip'),
-        u'nextHopVpnTunnel': replace_resource_dict(module.params.get(u'next_hop_vpn_tunnel', {}), 'selfLink'),
-        u'nextHopNetwork': response.get(u'nextHopNetwork'),
-    }
+    return { u'destRange': response.get(u'destRange'),u'description': response.get(u'description'),u'name': response.get(u'name'),u'network': replace_resource_dict(module.params.get(u'network', {}), 'selfLink'),u'priority': module.params.get('priority'),u'tags': module.params.get('tags'),u'nextHopGateway': module.params.get('next_hop_gateway'),u'nextHopInstance': replace_resource_dict(module.params.get(u'next_hop_instance', {}), 'selfLink'),u'nextHopIp': module.params.get('next_hop_ip'),u'nextHopVpnTunnel': replace_resource_dict(module.params.get(u'next_hop_vpn_tunnel', {}), 'selfLink'),u'nextHopNetwork': response.get(u'nextHopNetwork') }
 
 
 def async_op_url(module, extra_data=None):
@@ -440,7 +450,6 @@ def wait_for_operation(module, response):
     status = navigate_hash(op_result, ['status'])
     wait_done = wait_for_completion(status, op_result, module)
     return fetch_resource(module, navigate_hash(wait_done, ['targetLink']), 'compute#route')
-
 
 def wait_for_completion(status, op_result, module):
     op_id = navigate_hash(op_result, ['name'])
